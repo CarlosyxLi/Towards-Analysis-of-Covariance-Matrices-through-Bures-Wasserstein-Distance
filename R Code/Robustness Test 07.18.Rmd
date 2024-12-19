@@ -1,0 +1,318 @@
+---
+title: "Untitled"
+author: "x"
+date: "2023-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+# library(pacman)
+# p_load(R.matlab, tidyverse, gridExtra, DT, latex2exp, extrafont)
+library(R.matlab)
+library(tidyverse)
+library(gridExtra)
+# library(DT)
+library(latex2exp)
+library(extrafont)
+loadfonts()
+options("scipen" = 100, "digits" = 4)
+```
+
+```{r}
+# import data
+rm(list = ls())
+vec_files <- dir(path = "D:/Projects/Manifold/Robustness Test/Test Results/12.02", pattern = "\\.mat$", full.names = TRUE)
+
+for (filepath in vec_files){
+
+  filename <- filepath %>%
+    str_sub(57, nchar(.)) %>%
+    str_sub(1, nchar(.)-4)
+
+  assign(filename, readMat(filepath, sep = ","))
+}
+
+select <- dplyr::select
+rep_A <- 100
+rep_B <- 100
+
+dim <- c(5, 10, 20, 30, 50, 100)
+p <- c(10, 20, 40, 60, 80)
+```
+
+## Robustness of Distance between Two Matrices {.tabset .tabset-pills .tabset-fade}
+
+
+
+### d(A1', A2') - d(A1, A2) {.tabset .tabset-pills .tabset-fade}
+
+```{r}
+appender1 <- function(string){
+  # c(TeX(r"(\Delta_{ij})"), TeX(r"(\Delta_{ij})"))
+  c(TeX(r"(\textit{$\Delta_{ij}^{BW}$})"), 
+    TeX(r"(\textit{$\Delta_{ij}^{AI}$})"))
+}
+```
+
+#### Dimension
+
+Proportion = 20%
+
+```{r, fig.width = 8, fig.height = 4}
+c(as.vector(two_dim5_p20$two.out[3, , ] - two_dim5_p20$two.out[1, , ]), 
+  as.vector(two_dim10_p20$two.out[3, , ] - two_dim10_p20$two.out[1, , ]), 
+  as.vector(two_dim20_p20$two.out[3, , ] - two_dim20_p20$two.out[1, , ]), 
+  as.vector(two_dim30_p20$two.out[3, , ] - two_dim30_p20$two.out[1, , ]), 
+  as.vector(two_dim50_p20$two.out[3, , ] - two_dim50_p20$two.out[1, , ]), 
+  as.vector(two_dim100_p20$two.out[3, , ] - two_dim100_p20$two.out[1, , ])) %>% 
+  cbind(dimension = rep(dim, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() -> two_rie
+  
+c(as.vector(two_dim5_p20$two.out[4, , ] - two_dim5_p20$two.out[2, , ]), 
+  as.vector(two_dim10_p20$two.out[4, , ] - two_dim10_p20$two.out[2, , ]), 
+  as.vector(two_dim20_p20$two.out[4, , ] - two_dim20_p20$two.out[2, , ]), 
+  as.vector(two_dim30_p20$two.out[4, , ] - two_dim30_p20$two.out[2, , ]), 
+  as.vector(two_dim50_p20$two.out[4, , ] - two_dim50_p20$two.out[2, , ]), 
+  as.vector(two_dim100_p20$two.out[4, , ] - two_dim100_p20$two.out[2, , ])) %>% 
+  cbind(dimension = rep(dim, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() %>% filter(-0.015 < two & two < 0.015) -> two_bw
+  
+rbind(two_rie, two_bw) %>% 
+  cbind(metric = rep(c("Riemannian", "BW"), times = c(nrow(two_rie), nrow(two_bw))), .) %>% 
+  mutate(dimension = factor(dimension, levels = dim)) -> two_all
+
+two_all %>% 
+  ggplot(aes(x = two, fill = dimension)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(metric ~ ., scale = "free", labeller = as_labeller(appender1, default = label_parsed)) + 
+  theme_bw(base_family = "LM Roman 10") +
+  theme(legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = -0.12), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.8), 
+        axis.title.y = element_text(size = 22, vjust = 1.2), 
+        axis.text = element_text(size = 18)
+        ) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) + 
+  labs(title = "(A)", 
+       x = NULL, y = "Density", fill = "Dimension") -> plot_a
+
+plot_a
+# ggsave("Robustness of Distance between Two Matrices (A).jpg")
+```
+
+#### Proportion (%)
+
+Dimension = 10
+
+```{r, fig.width = 8, fig.height = 4}
+c(as.vector(two_dim10_p10$two.out[3, , ] - two_dim10_p10$two.out[1, , ]), 
+  as.vector(two_dim10_p20$two.out[3, , ] - two_dim10_p20$two.out[1, , ]), 
+  as.vector(two_dim10_p40$two.out[3, , ] - two_dim10_p40$two.out[1, , ]), 
+  as.vector(two_dim10_p60$two.out[3, , ] - two_dim10_p60$two.out[1, , ]), 
+  as.vector(two_dim10_p80$two.out[3, , ] - two_dim10_p80$two.out[1, , ])) %>% 
+  cbind(proportion = rep(p, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() -> two_rie
+  
+c(as.vector(two_dim10_p10$two.out[4, , ] - two_dim10_p10$two.out[2, , ]), 
+  as.vector(two_dim10_p20$two.out[4, , ] - two_dim10_p20$two.out[2, , ]), 
+  as.vector(two_dim10_p40$two.out[4, , ] - two_dim10_p40$two.out[2, , ]), 
+  as.vector(two_dim10_p60$two.out[4, , ] - two_dim10_p60$two.out[2, , ]), 
+  as.vector(two_dim10_p80$two.out[4, , ] - two_dim10_p80$two.out[2, , ])) %>% 
+  cbind(proportion = rep(p, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() %>% 
+  filter(-0.023 < two) -> two_bw
+  
+rbind(two_rie, two_bw) %>% 
+  cbind(metric = rep(c("R", "BW"), times = c(nrow(two_rie), nrow(two_bw))), .) %>% 
+  mutate(proportion = factor(proportion, levels = p)) -> two_all
+
+two_all %>% 
+  ggplot(aes(x = two, fill = proportion)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(metric ~ ., scale = "free", labeller = as_labeller(appender1, default = label_parsed)) + 
+  theme_bw(base_family = "LM Roman 10") +
+  theme(legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = -0.12), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.8), 
+        axis.title.y = element_text(size = 22, vjust = 1.2), 
+        axis.text = element_text(size = 18), 
+        ) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) + 
+  labs(title = "(B)", 
+       x = NULL, y = "Density", fill = "Proportion (%)") -> plot_b
+
+plot_b
+# ggsave("Robustness of Distance between Two Matrices (B).jpg")
+```
+
+```{r, fig.width = 8, fig.height = 8}
+plot_a_grob <- ggplotGrob(plot_a)
+plot_b_grob <- ggplotGrob(plot_b)
+
+layout <- rbind(1, 2)
+grid.arrange(plot_a_grob, plot_b_grob, 
+             heights = c(1, 1), 
+             layout_matrix = layout) -> panel
+
+panel
+# ggsave("Robustness of Distance between Two Matrices.jpg", panel, device = "jpeg",
+#        width = 8, height = 8)
+```
+
+
+
+
+
+### (d(A1', A2') - d(A1, A2)) / d(A1, A2) {.tabset .tabset-pills .tabset-fade}
+
+```{r}
+# appender2 <- function(string){
+#   # c(TeX(r"(\Delta_{ij})"), TeX(r"(\Delta_{ij})"))
+#   c(TeX(r"(\textit{$\Delta_{ij}^{BW}/d_{BW}(A_{i},B_{i})$})"), 
+#     TeX(r"(\textit{$\Delta_{ij}^{AI}/d_{AI}(A_{i},B_{i})$})"))
+# }
+
+appender2 <- function(string){
+  # c(TeX(r"(\Delta_{ij})"), TeX(r"(\Delta_{ij})"))
+  c(TeX(r"(\textit{$\Delta_{ij}^{BW}$})"), 
+    TeX(r"(\textit{$\Delta_{ij}^{AI}$})"))
+}
+```
+
+#### Dimension
+
+Proportion = 20%
+
+```{r, fig.width = 8, fig.height = 4}
+c(as.vector((two_dim5_p20$two.out[3, , ] - two_dim5_p20$two.out[1, , ])/two_dim5_p20$two.out[1, , ]), 
+  as.vector((two_dim10_p20$two.out[3, , ] - two_dim10_p20$two.out[1, , ])/two_dim10_p20$two.out[1, , ]), 
+  as.vector((two_dim20_p20$two.out[3, , ] - two_dim20_p20$two.out[1, , ])/two_dim20_p20$two.out[1, , ]), 
+  as.vector((two_dim30_p20$two.out[3, , ] - two_dim30_p20$two.out[1, , ])/two_dim30_p20$two.out[1, , ]), 
+  as.vector((two_dim50_p20$two.out[3, , ] - two_dim50_p20$two.out[1, , ])/two_dim50_p20$two.out[1, , ]), 
+  as.vector((two_dim100_p20$two.out[3, , ] - two_dim100_p20$two.out[1, , ])/two_dim100_p20$two.out[1, , ])) %>% 
+  cbind(dimension = rep(dim, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() %>% filter(-0.3 < two & two < 0.2) -> two_rie
+  
+c(as.vector((two_dim5_p20$two.out[4, , ] - two_dim5_p20$two.out[2, , ])/two_dim5_p20$two.out[2, , ]), 
+  as.vector((two_dim10_p20$two.out[4, , ] - two_dim10_p20$two.out[2, , ])/two_dim10_p20$two.out[2, , ]), 
+  as.vector((two_dim20_p20$two.out[4, , ] - two_dim20_p20$two.out[2, , ])/two_dim20_p20$two.out[2, , ]), 
+  as.vector((two_dim30_p20$two.out[4, , ] - two_dim30_p20$two.out[2, , ])/two_dim30_p20$two.out[2, , ]), 
+  as.vector((two_dim50_p20$two.out[4, , ] - two_dim50_p20$two.out[2, , ])/two_dim50_p20$two.out[2, , ]), 
+  as.vector((two_dim100_p20$two.out[4, , ] - two_dim100_p20$two.out[2, , ])/two_dim100_p20$two.out[2, , ])) %>% 
+  cbind(dimension = rep(dim, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() %>% filter(-0.004 < two & two < 0.002) -> two_bw
+  
+rbind(two_rie, two_bw) %>% 
+  cbind(metric = rep(c("Riemannian", "BW"), times = c(nrow(two_rie), nrow(two_bw))), .) %>% 
+  mutate(dimension = factor(dimension, levels = dim)) -> two_all
+
+two_all %>% 
+  ggplot(aes(x = two, fill = dimension)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(metric ~ ., scale = "free", labeller = as_labeller(appender2, default = label_parsed)) + 
+  theme_bw(base_family = "LM Roman 10") +
+  theme(legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = -0.142), 
+        strip.text = element_text(size = 22), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.8), 
+        axis.title.y = element_text(size = 22, vjust = 1.2), 
+        axis.text = element_text(size = 18)
+        ) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) + 
+  labs(title = "(A)", 
+       x = NULL, y = "Density", fill = "Dimension") -> plot_a
+
+plot_a
+# ggsave("Robustness of Distance between Two Matrices (A).jpg")
+```
+
+#### Proportion (%)
+
+Dimension = 10
+
+```{r, fig.width = 8, fig.height = 4}
+c(as.vector((two_dim10_p10$two.out[3, , ] - two_dim10_p10$two.out[1, , ])/two_dim10_p10$two.out[1, , ]), 
+  as.vector((two_dim10_p20$two.out[3, , ] - two_dim10_p20$two.out[1, , ])/two_dim10_p20$two.out[1, , ]), 
+  as.vector((two_dim10_p40$two.out[3, , ] - two_dim10_p40$two.out[1, , ])/two_dim10_p40$two.out[1, , ]), 
+  as.vector((two_dim10_p60$two.out[3, , ] - two_dim10_p60$two.out[1, , ])/two_dim10_p60$two.out[1, , ]), 
+  as.vector((two_dim10_p80$two.out[3, , ] - two_dim10_p80$two.out[1, , ])/two_dim10_p80$two.out[1, , ])) %>% 
+  cbind(proportion = rep(p, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() -> two_rie
+  
+c(as.vector((two_dim10_p10$two.out[4, , ] - two_dim10_p10$two.out[2, , ])/two_dim10_p10$two.out[2, , ]), 
+  as.vector((two_dim10_p20$two.out[4, , ] - two_dim10_p20$two.out[2, , ])/two_dim10_p20$two.out[2, , ]), 
+  as.vector((two_dim10_p40$two.out[4, , ] - two_dim10_p40$two.out[2, , ])/two_dim10_p40$two.out[2, , ]), 
+  as.vector((two_dim10_p60$two.out[4, , ] - two_dim10_p60$two.out[2, , ])/two_dim10_p60$two.out[2, , ]), 
+  as.vector((two_dim10_p80$two.out[4, , ] - two_dim10_p80$two.out[2, , ])/two_dim10_p80$two.out[2, , ])) %>% 
+  cbind(proportion = rep(p, each = rep_B*rep_A), two = .) %>% 
+  as.data.frame() %>% filter(-0.015 < two & two < 0.005) -> two_bw
+
+rbind(two_rie, two_bw) %>% 
+  cbind(metric = rep(c("R", "BW"), times = c(nrow(two_rie), nrow(two_bw))), .) %>% 
+  mutate(proportion = factor(proportion, levels = p)) -> two_all
+
+two_all %>% 
+  ggplot(aes(x = two, fill = proportion)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(metric ~ ., scale = "free", labeller = as_labeller(appender2, default = label_parsed)) + 
+  theme_bw(base_family = "LM Roman 10") +
+  theme(legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = -0.12), 
+        strip.text = element_text(size = 22), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.8), 
+        axis.title.y = element_text(size = 22, vjust = 1.2), 
+        axis.text = element_text(size = 18), 
+        ) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) + 
+  labs(title = "(B)", 
+       x = NULL, y = "Density", fill = "Proportion (%)") -> plot_b
+
+plot_b
+# ggsave("Robustness of Distance between Two Matrices (B).jpg")
+```
+
+```{r, fig.width = 16, fig.height = 4}
+plot_a_grob <- ggplotGrob(plot_a)
+plot_b_grob <- ggplotGrob(plot_b)
+
+layout <- cbind(1, 2)
+grid.arrange(plot_a_grob, plot_b_grob, 
+             widths = c(1, 1), 
+             layout_matrix = layout) -> panel
+
+panel
+# ggsave("Robustness of Distance between Two Matrices (ii).jpg", panel, device = "jpeg", width = 16, height = 4)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

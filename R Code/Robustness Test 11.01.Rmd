@@ -1,0 +1,537 @@
+---
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+# library(pacman)
+# p_load(tidyverse, gridExtra, ggh4x)
+library(tidyverse)
+library(gridExtra)
+library(ggh4x)
+library(latex2exp)
+library(extrafont)
+loadfonts()
+options("scipen" = 100, "digits" = 4)
+```
+
+```{r}
+# # import data
+# rm(list = ls())
+# vec_files <- dir(path = "D:/Projects/Manifold/Robustness Test/Test Results/11.01", pattern = "\\.txt$", full.names = TRUE)
+# 
+# for (filepath in vec_files){
+# 
+#   filename <- filepath %>%
+#     str_sub(57, nchar(.)) %>%
+#     str_sub(1, nchar(.)-4)
+# 
+#   assign(filename, read.table(filepath, sep = ","))
+# }
+```
+
+```{r}
+# save.image(file = "Robustness Test 11.01.RData")
+rm(list = ls())
+load("Robustness Test 11.01.RData")
+```
+
+```{r}
+rep <- 200
+samp <- 100
+```
+
+```{r}
+robust_test <- function(data){
+  
+  p_hist <- as.matrix(data) %>% t() %>%
+    as.data.frame() %>%
+    setNames(c("Rie", "BW")) %>%
+    gather(Distance, Value)
+  
+  p_vline <- p_hist %>% group_by(Distance) %>% summarise(mean = mean(Value))
+  
+  mean_bw <- p_vline[p_vline$Distance == "BW", ]$mean
+  mean_rie <- p_vline[p_vline$Distance == "Rie", ]$mean
+  diff <- mean_rie - mean_bw
+  diff_pct <- (mean_rie - mean_bw)/mean_bw
+  
+  histogram <- p_hist %>% ggplot(aes(x = Value, fill = Distance)) +
+    geom_histogram(bins = 40, boundary = 0, col = "black", alpha = 0.5, position = "identity") +
+    geom_vline(data = p_vline, 
+               aes(xintercept = mean, col = Distance), 
+               size = 1, linetype = "dashed") +
+    theme_minimal() +
+    #theme(legend.position = "bottom") +
+    labs(x = "Distance between Two Means", y = NULL, fill = NULL, col = NULL, 
+         subtitle = paste0("Relative Difference: (Rie Mean - BW Mean) / BW Mean = ", 100*round(diff_pct, 4), "%"))
+  
+  return(list(histogram = histogram, diff = diff, diff_pct = diff_pct))
+}
+```
+
+```{r}
+xx <- c()
+for (i in 1:rep){
+  
+  x <- dist_geodesic_control %>%
+    .[, ((i-1)*samp+1):(i*samp)] %>%
+    robust_test()
+  
+  xx <- c(xx, x$diff_pct)
+}
+
+xx
+```
+
+```{r}
+summary(xx)
+cat("\n")
+sum(xx < 0) /200
+sum(0 <= xx & xx <= 14.81) /200
+sum(xx > 14.81) /200
+cat("\n")
+xx[61]
+xx[21]
+xx[125]
+```
+# 3 Cases
+
+```{r, fig.width = 7, fig.height = 3.5}
+# i <- 61
+# p3 <- dist_geodesic_control %>%
+#   .[, ((i-1)*samp+1):(i*samp)] %>%
+#   robust_test() %>% 
+#   .$histogram +
+#   theme(legend.position = c(0.9, 0.78), 
+#         legend.background = element_rect(fill = "grey100", color = "black"), 
+#         legend.title = element_text(size = 16, face = "bold"), 
+#         legend.text = element_text(size = 12), 
+#         axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+#         axis.text = element_text(size = 12), 
+#         plot.title = element_text(face = "bold", size = 18, hjust = -0.03), 
+#         plot.subtitle = element_text(size = 12)) +
+#   labs(title = "A")
+# p3
+# 
+# i <- 21
+# p4 <- dist_geodesic_control %>%
+#   .[, ((i-1)*samp+1):(i*samp)] %>%
+#   robust_test() %>% 
+#   .$histogram +
+#   theme(legend.position = c(0.9, 0.78), 
+#         legend.background = element_rect(fill = "grey100", color = "black"), 
+#         legend.title = element_text(size = 16, face = "bold"), 
+#         legend.text = element_text(size = 12), 
+#         axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+#         axis.text = element_text(size = 12), 
+#         plot.title = element_text(face = "bold", size = 18, hjust = -0.03), 
+#         plot.subtitle = element_text(size = 12)) +
+#   labs(title = "B")
+# p4
+# 
+# i <- 125
+# p4 <- dist_geodesic_control %>%
+#   .[, ((i-1)*samp+1):(i*samp)] %>%
+#   robust_test() %>% 
+#   .$histogram +
+#   theme(legend.position = c(0.9, 0.78), 
+#         legend.background = element_rect(fill = "grey100", color = "black"), 
+#         legend.title = element_text(size = 16, face = "bold"), 
+#         legend.text = element_text(size = 12), 
+#         axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+#         axis.text = element_text(size = 12), 
+#         plot.title = element_text(face = "bold", size = 18, hjust = -0.03), 
+#         plot.subtitle = element_text(size = 12)) +
+#   labs(title = "B")
+# p4
+```
+
+```{r, fig.width = 8, fig.height = 3.5}
+data1 <- dist_geodesic_control[, ((61-1)*samp+1):(61*samp)] %>% 
+  as.matrix() %>% t() %>%
+  as.data.frame() %>%
+  setNames(c("Rie", "BW")) %>%
+  gather(Distance, Value) %>% 
+  filter(Value < 0.58)
+
+data2 <- dist_geodesic_control[, ((21-1)*samp+1):(21*samp)] %>% 
+  as.matrix() %>% t() %>%
+  as.data.frame() %>%
+  setNames(c("Rie", "BW")) %>%
+  gather(Distance, Value)
+
+data3 <- dist_geodesic_control[, ((125-1)*samp+1):(125*samp)] %>% 
+  as.matrix() %>% t() %>%
+  as.data.frame() %>%
+  setNames(c("Rie", "BW")) %>%
+  gather(Distance, Value) %>% 
+  filter(Value > 0.31)
+
+p_dense <- rbind(data1, data2, data3) %>% 
+  cbind(Case = rep(c("Case 1", "Case 2", "Case 3"), times = c(nrow(data1), nrow(data2), nrow(data3))), .)
+
+p_dense %>% ggplot(aes(x = Value, fill = Distance)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(Case ~., scales = "free_x") +
+  theme_bw(base_family = "LM Roman 10") +
+  theme(#text = element_text(family = "LM Roman 10"), 
+        legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = -0.17), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.8), 
+        axis.title.y = element_text(size = 22, vjust = 1), 
+        axis.text = element_text(size = 18), 
+        # panel.grid.minor = element_blank()
+        panel.spacing = unit(0.8, "lines")
+        ) +
+  scale_fill_discrete(labels = c(TeX(r"(\textit{$d_{F}(M_{i}^{BW},\tilde{M}_{ij}^{BW})$})"), TeX(r"(\textit{$d_{F}(M_{i}^{AI},\tilde{M}_{ij}^{AI})$})"))) +
+  labs(#title = TeX(r"(Distribution of $\sqrt{\textit{tr}[\textit{(M_{i} - \tilde{M}_{ij})(M_{i} - \tilde{M}_{ij})^{'}}]}$)"), 
+       x = NULL, y = "Density", fill = NULL)
+
+ggsave("Robustness of Barycenter Estimation - Two Matrices (3 Cases).jpg")
+```
+
+# Robustness Test 11.01 {.tabset .tabset-pills .tabset-fade}
+
+## 1. Dimension {.tabset .tabset-pills .tabset-fade}
+
+Proportion of Close-to-Zero Eigenvalues = 20%
+
+```{r, fig.width = 7, fig.height = 5}
+# density of RC
+cbind(dist_geodesic_dim5, 
+      dist_geodesic_dim10, 
+      dist_geodesic_control, 
+      dist_geodesic_dim35, 
+      dist_geodesic_dim50, 
+      dist_geodesic_dim100) %>% 
+  as.matrix() %>% t() %>% 
+  as.data.frame() %>% 
+  setNames(c("Rie", "BW")) %>% 
+  cbind(dim = rep(c(5, 10, 20, 30, 50, 100), each = rep*samp), 
+        rep = rep(1:rep, each = samp), .) %>% 
+  group_by(dim, rep) %>% 
+  summarise(mean_rie = mean(Rie), mean_bw = mean(BW), 
+            .groups = "drop") %>% 
+  ungroup() %>% 
+  mutate(rc = (mean_rie - mean_bw)/mean_bw) -> p_dense
+
+# vertical lines for median RC
+p_dense %>% group_by(dim) %>% 
+  summarise(med_rc = median(rc)) -> p_vline
+
+# line plot
+line1 <- p_vline %>% 
+  ggplot(aes(x = dim, y = med_rc)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(10, 50, 100)) +
+  theme_bw() +
+  theme(panel.grid.minor.y = element_blank(), 
+        text = element_text(family = "LM Roman 10"), 
+        # legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = 1.9), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.6)) +
+  scale_y_continuous(limits = c(2, 10), breaks = c(2, 6, 10)) +
+  labs(x = NULL, y = NULL)
+
+# density plot
+p1 <- p_dense %>% 
+  ggplot(aes(x = rc, fill = factor(dim, levels = c(5, 10, 20, 30, 50, 100)))) +
+  geom_density(alpha = 0.4) +
+  # geom_vline(data = p_vline,
+  #            aes(xintercept = 100*med_rc, col = factor(dim, levels = c(5, 10, 20, 30, 50, 100))),
+  #            size = 1, linetype = "dashed",
+  #            show.legend = FALSE) +
+  geom_vline(xintercept = 0, size = 1, col = "grey30", linetype = "longdash") +
+  annotation_custom(ggplotGrob(line1), xmin = 0.42*40, xmax = 1*40, ymin = 0.0828, ymax = 0.191) +
+  scale_x_continuous(limits = c(-8, 40)) +
+  theme_bw() +
+  theme(# legend.position = "bottom",
+        # #legend.background = element_rect(fill = "grey100", color = "black"), 
+        # legend.title = element_text(size = 16, face = "bold"), 
+        # legend.text = element_text(size = 12), 
+        # axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+        # axis.text = element_text(size = 12), 
+        plot.title = element_text(face = "bold", size = 18, vjust = -3.7, hjust = -0.23), 
+        
+        text = element_text(family = "LM Roman 10"), 
+        legend.position = "bottom", 
+        #plot.title = element_text(size = 22, hjust = 1.9), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.6), 
+        axis.title.y = element_text(size = 22, vjust = 2.2), 
+        plot.margin = margin(0,16,8,12)) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
+  labs(title = "(A)", 
+       x = TeX(r"(\textit{$\delta_{i}$})"), y = "Desnity", fill = "Dimension")
+
+p1
+```
+
+```{r}
+p_dense$dim <- factor(p_dense$dim)
+
+library(FSA)
+
+kw_dim_bw <- kruskal.test(rc ~ dim, data = p_dense)
+kw_dim_bw
+
+dunn_dim_bw <- dunnTest(rc ~ dim, data = p_dense)
+dunn_dim_bw
+```
+
+
+## 2. Proportion of Close-to-Zero Eigenvalues {.tabset .tabset-pills .tabset-fade}
+
+Dimension = 20
+
+```{r, fig.width = 7, fig.height = 5}
+# density of RC
+cbind(dist_geodesic_pct10, 
+      dist_geodesic_control, 
+      dist_geodesic_pct30, 
+      dist_geodesic_pct40, 
+      dist_geodesic_pct50, 
+      dist_geodesic_pct60, 
+      dist_geodesic_pct70, 
+      dist_geodesic_pct80, 
+      dist_geodesic_pct90) %>% 
+  as.matrix() %>% t() %>% 
+  as.data.frame() %>% 
+  setNames(c("Rie", "BW")) %>% 
+  cbind(pct = rep(10*1:9, each = rep*samp), 
+        rep = rep(1:rep, each = samp), .) %>% 
+  group_by(pct, rep) %>% 
+  summarise(mean_rie = mean(Rie), mean_bw = mean(BW), 
+            .groups = "drop") %>% 
+  ungroup() %>% 
+  mutate(rc = (mean_rie - mean_bw)/mean_bw) %>% 
+  filter(pct %in% c(10, 20, 40, 60, 80)) -> p_dense
+
+# vertical lines for median RC
+p_dense %>% group_by(pct) %>% 
+  summarise(med_rc = median(rc)) -> p_vline
+
+# line plot
+line2 <- p_vline %>% 
+  ggplot(aes(x = pct, y = med_rc)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = c(20, 40, 60, 80)) +
+  theme_bw() +
+  theme(panel.grid.minor.y = element_blank(), 
+        text = element_text(family = "LM Roman 10"), 
+        # legend.position = "bottom", 
+        plot.title = element_text(size = 22, hjust = 1.9), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.6)) +
+  scale_y_continuous(limits = c(2, 10), breaks = c(2, 6, 10)) +
+  labs(x = NULL, y = NULL)
+
+# plot
+p2 <- p_dense %>% 
+  ggplot(aes(x = rc, fill = factor(pct, levels = 10*1:9))) +
+  geom_density(alpha = 0.4) +
+  # geom_vline(data = p_vline, 
+  #            aes(xintercept = 100*med_rc, col = factor(pct, levels = 10*1:9)), 
+  #            size = 1, linetype = "dashed", 
+  #            show.legend = FALSE) +
+  geom_vline(xintercept = 0, size = 1, col = "grey30", linetype = "longdash") +
+  annotation_custom(ggplotGrob(line2), xmin = 0.42*40, xmax = 1*40, ymin = 0.0277, ymax = 0.0645) +
+  scale_x_continuous(limits = c(-8, 40)) +
+  theme_bw() +
+  theme(# legend.position = "bottom",
+        # #legend.background = element_rect(fill = "grey100", color = "black"), 
+        # legend.title = element_text(size = 16, face = "bold"), 
+        # legend.text = element_text(size = 12), 
+        # axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+        # axis.text = element_text(size = 12), 
+        # plot.title = element_text(face = "bold", size = 18, hjust = -0.08)
+        
+        text = element_text(family = "LM Roman 10"), 
+        legend.position = "bottom", 
+        plot.title = element_text(face = "bold", size = 18, vjust = -3.7, hjust = -0.23), 
+        strip.text = element_text(size = 18), 
+        legend.title = element_text(size = 22), 
+        legend.text = element_text(size = 18), 
+        axis.text = element_text(size = 18), 
+        axis.title.x = element_text(size = 22, vjust = -0.6), 
+        axis.title.y = element_text(size = 22, vjust = 2.2), 
+        plot.margin = margin(0,16,8,12)) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
+  labs(title = "(B)", 
+       x = TeX(r"(\textit{$\delta_{i}$})"), y = "Density", fill = "Proportion (%)")
+
+p2
+```
+
+```{r, fig.width = 12, fig.height = 4.5}
+p1_grob <- ggplotGrob(p1)
+p2_grob <- ggplotGrob(p2)
+
+layout <- cbind(1, 2)
+grid.arrange(p1_grob, p2_grob, 
+             widths = c(1, 1), 
+             layout_matrix = layout) -> panel
+
+# ggsave("Mean Relative Difference.jpg", panel, 
+#        width = 8, height = 7.5)
+
+ggsave("center2robust2.jpg", panel, device = "jpeg", width = 12, height = 4.5)
+```
+
+```{r}
+p_dense$pct <- factor(p_dense$pct)
+
+library(FSA)
+
+kw_pct <- kruskal.test(rc ~ pct, data = p_dense)
+kw_pct
+
+dunn_pct <- dunnTest(rc ~ pct, data = p_dense)
+dunn_pct
+```
+
+```{r, fig.width = 7, fig.height = 5}
+# # density of RC
+# cbind(dist_geodesic_pct10, 
+#       dist_geodesic_control, 
+#       dist_geodesic_pct30, 
+#       dist_geodesic_pct40, 
+#       dist_geodesic_pct50, 
+#       dist_geodesic_pct60, 
+#       dist_geodesic_pct70, 
+#       dist_geodesic_pct80, 
+#       dist_geodesic_pct90) %>% 
+#   as.matrix() %>% t() %>% 
+#   as.data.frame() %>% 
+#   setNames(c("Rie", "BW")) %>% 
+#   cbind(pct = rep(10*1:9, each = rep*samp), 
+#         rep = rep(1:rep, each = samp), .) %>% 
+#   group_by(pct, rep) %>% 
+#   summarise(mean_rie = mean(Rie), mean_bw = mean(BW), 
+#             .groups = "drop") %>% 
+#   ungroup() %>% 
+#   mutate(rc = (mean_rie - mean_bw)/mean_bw) -> p_dense
+# 
+# # vertical lines for median RC
+# p_dense %>% group_by(pct) %>% 
+#   summarise(med_rc = median(rc)) -> p_vline
+# 
+# # line plot
+# line2 <- p_vline %>% 
+#   ggplot(aes(x = pct, y = 100*med_rc)) +
+#   geom_point() +
+#   geom_line() +
+#   scale_x_continuous(breaks = c(20, 40, 60, 80)) +
+#   theme_bw() +
+#   theme(panel.grid.minor = element_blank(), 
+#         text = element_text(family = "LM Roman 10"), 
+#         # legend.position = "bottom", 
+#         plot.title = element_text(size = 22, hjust = 1.9), 
+#         strip.text = element_text(size = 18), 
+#         legend.title = element_text(size = 22), 
+#         legend.text = element_text(size = 18), 
+#         axis.text = element_text(size = 18), 
+#         axis.title.x = element_text(size = 22, vjust = -0.6)) +
+#   labs(x = NULL, y = NULL)
+# 
+# # plot
+# p2 <- p_dense %>% 
+#   ggplot(aes(x = 100*rc, fill = factor(pct, levels = 10*1:9))) +
+#   geom_density(alpha = 0.4) +
+#   # geom_vline(data = p_vline, 
+#   #            aes(xintercept = 100*med_rc, col = factor(pct, levels = 10*1:9)), 
+#   #            size = 1, linetype = "dashed", 
+#   #            show.legend = FALSE) +
+#   geom_vline(xintercept = 0, size = 1, col = "grey30", linetype = "longdash") +
+#   annotation_custom(ggplotGrob(line2), xmin = 0.42*4000, xmax = 1*4000, ymin = 0.00028, ymax = 0.000708) +
+#   scale_x_continuous(limits = 100*c(-8, 40)) +
+#   theme_bw() +
+#   theme(# legend.position = "bottom",
+#         # #legend.background = element_rect(fill = "grey100", color = "black"), 
+#         # legend.title = element_text(size = 16, face = "bold"), 
+#         # legend.text = element_text(size = 12), 
+#         # axis.title.x = element_text(size = 16, vjust = 0.5, face = "bold"), 
+#         # axis.text = element_text(size = 12), 
+#         # plot.title = element_text(face = "bold", size = 18, hjust = -0.08)
+#         
+#         text = element_text(family = "LM Roman 10"), 
+#         legend.position = "bottom", 
+#         plot.title = element_text(size = 22, hjust = 1.9), 
+#         strip.text = element_text(size = 18), 
+#         legend.title = element_text(size = 22), 
+#         legend.text = element_text(size = 18), 
+#         axis.text = element_text(size = 18), 
+#         axis.title.x = element_text(size = 22, vjust = -0.6), 
+#         axis.title.y = element_text(size = 22, vjust = 1.2)) +
+#   # guides(fill = guide_legend(hjust = 10)) + 
+#   labs(#title = "D", 
+#        x = "Relative Difference of Means (%)", y = "Density", fill = "Proportion (%)")
+# 
+# p2
+```
+
+```{r, fig.width = 8, fig.height = 7.5}
+p1_grob <- ggplotGrob(p1)
+p2_grob <- ggplotGrob(p2)
+
+layout <- rbind(1, 2)
+grid.arrange(p1_grob, p2_grob, 
+             # heights = c(1, 1.75), 
+             layout_matrix = layout) -> panel
+
+# ggsave("Mean Relative Difference.jpg", panel, 
+#        width = 8, height = 7.5)
+
+ggsave("new.jpg", panel,
+       width = 8, height = 7.5)
+```
+
+
+
+```{r, fig.width = 15, fig.height = 9}
+# p1_grob <- ggplotGrob(p1)
+# p2_grob <- ggplotGrob(p2)
+# p3_grob <- ggplotGrob(p3)
+# p4_grob <- ggplotGrob(p4)
+# 
+# 
+# layout <- rbind(c(1, 2), c(3, 4))
+# grid.arrange(p3_grob, p4_grob, p1_grob, p2_grob, 
+#              heights = c(1, 1.75), 
+#              layout_matrix = layout) -> panel
+# 
+# ggsave("Robustness Test Panel.pdf", panel)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
